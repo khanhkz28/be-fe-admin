@@ -1,0 +1,54 @@
+# version: '3.4'
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: unless-stopped
+    environment:
+      DB_PASSWORD: 1234   # ✅ Chỉ dùng cái này để thiết lập mật khẩu cho root
+      DB_DATABASE: user-manager
+    ports:
+      - "3306:3306"
+    networks:
+      - db
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql-dump:/docker-entrypoint-initdb.d
+
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    networks:
+      - db
+    ports:
+      - 8000:8000
+    environment:
+      - DB_HOST:127.0.0.1
+    expose:
+      - 8000
+    depends_on:
+      - mysql
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 5173:5173
+    networks:
+      - db
+    depends_on:
+      - backend
+
+networks:
+  db:
+    driver: bridge
+volumes:
+  mysql_data:  # 🔥 Định nghĩa volume để tránh lỗi

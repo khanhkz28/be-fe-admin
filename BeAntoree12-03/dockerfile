@@ -1,0 +1,75 @@
+# FROM php:8.2-fpm
+
+# # Cài đặt các extension PHP cần thiết
+# RUN apt-get update && apt-get install -y \
+#     libpng-dev \
+#     libjpeg-dev \
+#     libfreetype6-dev \
+#     zip \
+#     unzip \
+#     git \
+#     curl \
+#     supervisor \
+#     && docker-php-ext-install pdo_mysql gd
+
+# # Cài đặt Composer
+# COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# # Thiết lập thư mục làm việc cho Laravel
+# WORKDIR /var/www/html
+
+# # Copy mã nguồn Laravel vào container
+# COPY . .
+
+# # Cài đặt các dependencies của Laravel
+# RUN composer install --no-dev --optimize-autoloader
+
+# # Phân quyền thư mục storage & bootstrap/cache
+# RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+#     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# # Expose port PHP-FPM
+# EXPOSE 8000
+
+# # Khởi động PHP-FPM
+# CMD ["php-fpm"]
+
+
+FROM php:8.2-fpm
+
+# Cài đặt các extension PHP cần thiết
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    supervisor \
+    && docker-php-ext-install pdo_mysql gd
+
+# Cài đặt Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Thiết lập thư mục làm việc cho Laravel
+WORKDIR /var/www/html
+
+# Copy mã nguồn Laravel vào container
+COPY . .
+
+# Copy file cấu hình Supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Cài đặt các dependencies của Laravel
+RUN composer install --no-dev --optimize-autoloader
+
+# Phân quyền thư mục storage & bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Expose port ứng dụng Laravel
+EXPOSE 8000
+
+# Khởi động Supervisor để quản lý Laravel
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
